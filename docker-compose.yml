@@ -22,7 +22,7 @@ services:
   discord-bot:
     build:
       dockerfile: Dockerfile
-      context: ..
+      context: .
     env_file:
         - .env
     environment:
