@@ -1,0 +1,7 @@
+DISCORD_TOKEN=''
+TS_AUTHKEY=''
+CONTAINER_NAME='discord-bot-service'
+TAILSCALE_TAG='discord-bot-dev'
+EPHEMERAL_MODE='true'
+SERVER_DNS='http//:domain-name-of-your-work-station'
+NAME='replace-with-your-name-for-uniqueness'

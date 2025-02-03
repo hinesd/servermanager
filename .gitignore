@@ -1,3 +1,5 @@
 .env
 .venv
-src/server_controller/server
+ts-oauth
+src/server_controller/server/*
+!src/server_controller/server/.gitkeep
