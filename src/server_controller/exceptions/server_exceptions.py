@@ -10,7 +10,7 @@ class ProcessDoesNotExist(Exception):
         super().__init__(self.message)
 
 
-class ProcessStartFailed(Exception):
+class ProcessCreationFailed(Exception):
     def __init__(self, message="Process start failed"):
         self.message = message
         super().__init__(self.message)
