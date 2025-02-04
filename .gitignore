@@ -1,5 +1,7 @@
 .env
 .venv
 ts-oauth
-src/server_controller/server/*
-!src/server_controller/server/.gitkeep
+src/server_controller/testserver/*
+!src/server_controller/testserver/server.properties
+!src/server_controller/testserver/settings.sh
+!src/server_controller/testserver/start_script.sh

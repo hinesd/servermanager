@@ -4,7 +4,8 @@ from mcrcon import MCRcon
 import asyncio
 import time
 from pathlib import Path
-from exceptions.server_exceptions import ProcessDoesNotExist, ProcessAlreadyExistsError, ProcessCreationFailed
+from server_controller.exceptions.server_exceptions import ProcessDoesNotExist, ProcessAlreadyExistsError, ProcessCreationFailed
+from config import ENV_NAME
 
 
 class MinecraftServer:
@@ -12,8 +13,8 @@ class MinecraftServer:
     def __init__(self):
         self.process = None
         self.base_path = next(p for p in Path(__file__).resolve().parents if p.name == 'server_controller')
-        self.start_script = f'{self.base_path}/server/start.bat'
-
+        self.server_path = f'{self.base_path}/server' if ENV_NAME == 'prod' else f'{self.base_path}/testserver/'
+        self.start_script = f'{self.server_path}/start_script.sh'
 
     def get_or_create_process(self, create_process=None) -> subprocess.Popen:
 
@@ -22,10 +23,19 @@ class MinecraftServer:
 
         if create_process:
             os.chmod(self.start_script, 0o755)
-            process = subprocess.Popen([self.start_script], shell=True, stdin=subprocess.PIPE)
+            process = subprocess.Popen(
+                [self.start_script],
+                shell=True,
+                stdin=subprocess.PIPE,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                cwd=self.server_path
+            )
             time.sleep(1)
             if process.poll() is not None:
-                raise ProcessCreationFailed()
+                stdout, stderr = process.communicate()
+                error_message = f"Process creation failed:\nSTDOUT: {stdout.decode()}\nSTDERR: {stderr.decode()}"
+                raise ProcessCreationFailed(error_message)
             return process
 
         if self.process:
@@ -51,8 +61,8 @@ class MinecraftServer:
             self.process = self.get_or_create_process(create_process=create_process)
         except ProcessAlreadyExistsError:
             raise ProcessAlreadyExistsError()
-        except ProcessCreationFailed:
-            raise ProcessCreationFailed()
+        except ProcessCreationFailed as e:
+            raise e
         except Exception as e:
             raise e
         #todo process validation is still required, currently dont know if this is a valid process
@@ -63,10 +73,10 @@ class MinecraftServer:
     async def graceful_shutdown(self):
         self.process.stdin.write(b'stop\n')
         self.process.stdin.flush()
-        await asyncio.sleep(5)
+        await asyncio.sleep(2)
         self.process.terminate()
         try:
-            self.process.wait(timeout=10)
+            self.process.wait(timeout=5)
         except subprocess.TimeoutExpired:
             self.process.kill()
             self.process.wait()
@@ -76,8 +86,8 @@ class MinecraftServer:
     async def stop(self):
         try:
             self.get_or_create_process()
-        except ProcessDoesNotExist:
-            raise ProcessDoesNotExist()
+        except ProcessDoesNotExist as e:
+            raise e
         except Exception as e:
             raise e
         await self.graceful_shutdown()

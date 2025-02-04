@@ -4,7 +4,7 @@ services:
   ts-oauth:
     image: tailscale/tailscale:latest
     container_name: ts-oauth
-    hostname: ${CONTAINER_NAME}-${NAME}
+    hostname: ${CONTAINER_NAME}-${ENV_NAME}
     env_file:
       - .env
     environment:

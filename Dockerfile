@@ -13,7 +13,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 COPY src/discord_bot /app
 
 # Copy the config.py file
-COPY config.py /app
+COPY src/config.py /app
 
 # Command to run your application
 CMD ["python", "bot.py"]
