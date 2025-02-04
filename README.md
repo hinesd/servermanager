@@ -20,8 +20,9 @@ ServerManager is an application that can be used to manage a minecraft server se
 1. **Install Java:**
 https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html
 2. **Download Minecraft server jar and place it in `servermanager/src/server_controller/testserver`:** https://www.minecraft.net/en-us/download/server
-3. **Add Device to Tailscale and configure Tags/ACL's:** https://tailscale.com/
-4. **create a `.env` file in `servermanager` using `.sample-env` as an example**
+3. **Install Docker Desktop:** https://www.docker.com/products/docker-desktop/
+4. **Add Device to Tailscale and configure Tags/ACL's:** https://tailscale.com/
+5. **create a `.env` file in `servermanager` using `.sample-env` as an example**
 4. **Generate Tailscale Oauth token and place it in `TS_AUTHKEY` in `.env`**
 5. **Take the Tag associated with the Oauth token and place it in `TAILSCALE_TAG`**
 6. **Create Discord Bot and add it to Discord Server:** https://discord.com/developers/applications
