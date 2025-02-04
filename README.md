@@ -47,7 +47,7 @@ To get started with ServerManager, follow these steps:
     python src/main.py
     ```
 
-4. **Build/Run the Docker container:**
+4. **Build/Run Discord Bot Docker container:**
     ```sh
     docker compose up --build
     ```
