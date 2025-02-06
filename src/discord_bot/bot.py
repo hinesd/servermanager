@@ -25,7 +25,6 @@ async def stop_server(ctx):
         try:
             response = await client.get(f"http://{SERVER_DNS}/server/stop")
             data = response.json()
-            print(data)
             await ctx.send(f"Status Code: {data['status_code']}, Detail: {data['detail']}")
         except Exception as e:
             await ctx.send(f"An error occurred: {str(e)}")

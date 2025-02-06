@@ -1,22 +1,28 @@
 class ProcessAlreadyExistsError(Exception):
-    def __init__(self, message="Process Already Exists"):
+    def __init__(self, message="Server Is Already Running"):
         self.message = message
         super().__init__(self.message)
 
 
 class ProcessDoesNotExist(Exception):
-    def __init__(self, message="Process Does Not Exist"):
+    def __init__(self, message="Server Is Not Running"):
         self.message = message
         super().__init__(self.message)
 
 
 class ProcessCreationFailed(Exception):
-    def __init__(self, message="Process Start Failed"):
+    def __init__(self, message="Server Creation Failed"):
         self.message = message
         super().__init__(self.message)
 
 
-class ProcessFailedDuringRun(Exception):
-    def __init__(self, message="Process Failed During Run"):
+class ProcessValidationFailed(Exception):
+    def __init__(self, message="Server Failed During Run"):
+        self.message = message
+        super().__init__(self.message)
+
+
+class ServerConnectionFailed(Exception):
+    def __init__(self, message="Server Failed During Run"):
         self.message = message
         super().__init__(self.message)
