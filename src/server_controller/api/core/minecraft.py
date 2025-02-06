@@ -17,12 +17,14 @@ class MinecraftServer:
         self.base_path = next(p for p in Path(__file__).resolve().parents if p.name == 'server_controller')
         self.server_path = f'{self.base_path}/server' if ENV_NAME == 'prod' else f'{self.base_path}/testserver/'
         self.start_script = f'{self.server_path}/start_script.sh'
-        self.server_properties = self._get_server_properties()
+        self.server_properties = self._init_server_properties()
         self.server_port = int(self.server_properties['server-port'])
 
 
-    def _get_server_properties(self):
-        #TODO add logic to dynamically override server.properties using attributes defined in config.py before load
+    def _init_server_properties(self):
+        # TODO
+        #  add logic to dynamically override server.properties using attributes defined in config.py before load
+        #  add logic to dynamically load start_script configs into settings.sh defined in config.py before load
         return dict([x.split('=') for x in open(self.server_path + 'server.properties').read().strip().split('\n')[2:]])
 
 
@@ -68,23 +70,24 @@ class MinecraftServer:
             except ConnectionRefusedError:
                 await sleep(10)
                 max_retries -= 1
+        raise ConnectionRefusedError()
 
 
-    async def validate_or_create_process(self, create_process=None):
-        if self.process and create_process:
-            raise ProcessAlreadyExistsError()
-        if create_process:
-            await to_thread(lambda: os.chmod(self.start_script, 0o755))
-            self.process = await create_subprocess_shell(self.start_script,stdin=PIPE,stdout=PIPE,stderr=PIPE,cwd=self.server_path)
-            await sleep(1)
-        await self.process_validation(create_process)
-
-
-    async def start(self, create_process=None):
+    async def start(self):
         if not os.path.exists(self.start_script):
+            #TODO
+            # validate environment before starting server
+            # ensure JAVA is installed
+            # ensure a server.jar exists
+            # Maybe this validation should happen in the system build step?
             raise FileNotFoundError(self.start_script)
+        if self.process:
+            raise ProcessAlreadyExistsError()
+        await to_thread(lambda: os.chmod(self.start_script, 0o755))
+        self.process = await create_subprocess_shell(self.start_script, stdin=PIPE, stdout=PIPE, stderr=PIPE,cwd=self.server_path)
+        await sleep(1)
         try:
-            await self.validate_or_create_process(create_process=create_process)
+            await self.process_validation(create_process=True)
         except ProcessValidationFailed:
             raise ProcessCreationFailed()
         return f'Server successfully started'
@@ -96,7 +99,11 @@ class MinecraftServer:
         return "Successfully Stopped Server"
 
 
-    async def get_status(self, query=None):
+    async def get_server_status(self, query=None):
         await self.process_validation()
         results = (await self.server_connection.async_status()).__dict__
         return results
+        # TODO
+        #  add logic to customize the query
+        #  add logic to track uptime
+        #  add logic to track time since last player connection
