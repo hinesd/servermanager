@@ -12,7 +12,7 @@ async def start_server():
     if minecraft_server is None:
         minecraft_server = MinecraftServer()
     try:
-        status = await minecraft_server.start(create_process=True)
+        status = await minecraft_server.start()
     except ProcessAlreadyExistsError:
         return HTTPException(status_code=500, detail="Server already running")
     except FileNotFoundError:
@@ -39,8 +39,10 @@ async def server_status(query: Optional[str] = None):
     global minecraft_server
     if minecraft_server is None:
         raise HTTPException(status_code=500, detail="Server has not been initialized")
-
-    status = await minecraft_server.get_status(query)
+    try:
+        status = await minecraft_server.get_server_status(query)
+    except ProcessDoesNotExist as e:
+        return {"status_code": 500, "detail": str(e)}
     return {"status_code": 200, "detail": status}
 
 
