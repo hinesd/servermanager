@@ -1,6 +1,6 @@
 from fastapi import APIRouter, HTTPException
 from typing import Optional
-from server_controller.api.core.minecraft import MinecraftServer
+from server_controller.core.minecraft_server_controller import ServerController
 from server_controller.exceptions.server_exceptions import ProcessDoesNotExist, ProcessAlreadyExistsError, ProcessCreationFailed
 
 router = APIRouter()
@@ -10,7 +10,7 @@ minecraft_server = None
 async def start_server():
     global minecraft_server
     if minecraft_server is None:
-        minecraft_server = MinecraftServer()
+        minecraft_server = ServerController()
     try:
         status = await minecraft_server.start()
     except ProcessAlreadyExistsError:
@@ -40,7 +40,7 @@ async def server_status(query: Optional[str] = None):
     if minecraft_server is None:
         raise HTTPException(status_code=500, detail="Server has not been initialized")
     try:
-        status = await minecraft_server.get_server_status(query)
+        status = await minecraft_server.server_status(query)
     except ProcessDoesNotExist as e:
         return {"status_code": 500, "detail": str(e)}
     return {"status_code": 200, "detail": status}
