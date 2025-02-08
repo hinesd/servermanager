@@ -1,9 +1,5 @@
 import os
-from typing import Optional
-
 from mcstatus import JavaServer
-from asyncio import Task
-import datetime
 from asyncio import create_subprocess_shell, wait_for, to_thread, sleep
 from asyncio.subprocess import PIPE
 from pathlib import Path
