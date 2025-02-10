@@ -74,11 +74,6 @@ class ServerController:
 
     async def start(self):
         if not os.path.exists(self.start_script):
-            #TODO
-            # validate environment before starting server
-            # ensure JAVA is installed
-            # ensure a server.jar exists
-            # Maybe this validation should happen in the system build step?
             raise FileNotFoundError(self.start_script)
         if self.server_process:
             raise ProcessAlreadyExistsError()
