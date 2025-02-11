@@ -1,48 +1,51 @@
 from fastapi import APIRouter, HTTPException
-from typing import Optional
-from server_controller.core.minecraft_server_controller import ServerController
-from server_controller.exceptions.server_exceptions import ProcessDoesNotExist, ProcessAlreadyExistsError, ProcessCreationFailed
+from server_controller.core.process_manager import *
+from config import START_SCRIPT
+from server_controller.core.server_manager import ServerManager
 
 router = APIRouter()
-minecraft_server = None
+process_manager = None
+server_manager = None
 
 @router.get("/server/start")
 async def start_server():
-    global minecraft_server
-    if minecraft_server is None:
-        minecraft_server = ServerController()
+    global process_manager
+    global server_manager
+    if process_manager is not None:
+        return {"status_code": 500, "detail": "Process Already Exists"}
     try:
-        status = await minecraft_server.start()
-    except ProcessAlreadyExistsError:
-        return HTTPException(status_code=500, detail="Server already running")
-    except FileNotFoundError:
-        return HTTPException(status_code=404, detail=f"{minecraft_server.start_script} not found")
-    except ProcessCreationFailed as e:
+        process_manager = ProcessManager(START_SCRIPT)
+        server_manager = ServerManager(process_manager)
+        await process_manager.start()
+        await server_manager.init_server_connection()
+    except (ProcessValidationFailed, FileNotFoundError, ConnectionRefusedError) as e:
+        process_manager = None
+        server_manager = None
         return {"status_code": 500, "detail": str(e)}
-    return {"status_code":200,"detail": status}
 
+    return {"status_code": 200, "detail": 'Server Started'}
 
 @router.get("/server/stop")
 async def stop_server():
-    global minecraft_server
-    if minecraft_server is None:
+    global process_manager
+    global server_manager
+    if process_manager is None:
         return HTTPException(status_code=500, detail="Server has not been initialized")
     try:
-        status = await minecraft_server.stop()
-    except ProcessDoesNotExist as e:
+        await process_manager.stop()
+    except (ProcessValidationFailed) as e:
         return {"status_code": 500, "detail": str(e)}
-    return {"status_code":200,"detail": status}
-
+    finally:
+        process_manager = None
+        server_manager = None
+    return {"status_code": 200, "detail": 'Server Stopped'}
 
 @router.get("/server/status")
-async def server_status(query: Optional[str] = None):
-    global minecraft_server
-    if minecraft_server is None:
+async def server_status(query: str | None = None):
+    if process_manager is None:
         raise HTTPException(status_code=500, detail="Server has not been initialized")
     try:
-        status = await minecraft_server.server_status(query)
-    except ProcessDoesNotExist as e:
+        status = await server_manager.server_status(query)
+    except (ProcessValidationFailed) as e:
         return {"status_code": 500, "detail": str(e)}
     return {"status_code": 200, "detail": status}
-
-
