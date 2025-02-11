@@ -5,7 +5,6 @@ from dotenv import load_dotenv
 load_dotenv()
 
 # Access environment variables
-DEBUG = os.getenv('DEBUG') == 'True'
 DISCORD_TOKEN = os.getenv('DISCORD_TOKEN')
 TS_AUTHKEY = os.getenv('TS_AUTHKEY')
 SERVER_DNS = os.getenv('SERVER_DNS')
