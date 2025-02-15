@@ -1,6 +1,6 @@
 # ServerManager
 
-This project will be used to gain experience with containerization, networking, and process management.
+Control a Minecraft Server from a discord bot using tailscale to connect containers and devices. 
 
 ## Table of Contents
 - [Features](#features)
@@ -17,9 +17,9 @@ ServerManager is an application that can be used to manage a minecraft server se
 
 ## System Configurations
 
-1. **Install Java:**
+1. **Install Java (LOCAL ONLY):**
 https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html
-2. **Download Minecraft server jar and place it in `servermanager/src/server_controller/testserver`:** https://www.minecraft.net/en-us/download/server
+2. **Download Minecraft server.jar and place it in `servermanager/server`. If using modpack, extract modpack content into server folder:** https://www.minecraft.net/en-us/download/server
 3. **Install Docker Desktop:** https://www.docker.com/products/docker-desktop/
 4. **Add Device to Tailscale and configure Tags/ACL's:** https://tailscale.com/
 5. **create a `.env` file in `servermanager` using `.sample-env` as an example**
