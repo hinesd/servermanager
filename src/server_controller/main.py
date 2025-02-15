@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.process_manager import ProcessManager, ProcessValidationFailed
 from core.server_manager import ServerManager
-from servermanager.settings.config import START_SCRIPT, SERVER_PATH, SERVER_DNS, SERVER_CONNECTION_RETRIES
+from servermanager.settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, SERVER_TIMEOUT
 
 router = APIRouter()
 process_manager = None
@@ -15,7 +15,7 @@ async def start_server():
     if process_manager is not None:
         return {"status_code": 500, "detail": "Process Already Exists"}
     try:
-        process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DNS, SERVER_CONNECTION_RETRIES)
+        process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN, SERVER_TIMEOUT)
         server_manager = ServerManager(process_manager)
         await process_manager.start()
         await server_manager.init_server_connection()

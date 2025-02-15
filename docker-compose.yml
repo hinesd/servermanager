@@ -2,11 +2,11 @@ services:
   ts-oauth:
     image: tailscale/tailscale:latest
     container_name: ts-oauth
-    hostname: ${CONTAINER_NAME}-${ENV_NAME}
+    hostname: discord-bot-service-${ENV_NAME}
     env_file:
       - .env
     environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=${EPHEMERAL_MODE}
+      - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=false
       - TS_EXTRA_ARGS=--advertise-tags=tag:${TAILSCALE_TAG}
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
@@ -36,6 +36,7 @@ services:
     restart: unless-stopped
 
   server-controller:
+    container_name: server-controller
     build:
       context: ${PWD}
       dockerfile: src/server_controller/Dockerfile

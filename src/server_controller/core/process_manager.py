@@ -9,11 +9,11 @@ logger = logging.getLogger(__name__)
 
 class ProcessManager:
 
-    def __init__(self, server_path, start_script, SERVER_DNS, SERVER_CONNECTION_RETRIES):
+    def __init__(self, server_path, start_script, server_domain, timeout):
         self.server_path = server_path
         self.start_script = f"{server_path}/{start_script}"
-        self.SERVER_DNS = SERVER_DNS
-        self.SERVER_CONNECTION_RETRIES = SERVER_CONNECTION_RETRIES
+        self.server_domain = server_domain
+        self.timeout = timeout
         self.is_windows = platform.system() == "Windows"
         self.process = None
 
@@ -40,26 +40,14 @@ class ProcessManager:
 
     async def create_process(self):
         await asyncio.to_thread(lambda: os.chmod(self.server_path, 0o755))
-        if self.is_windows:
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-            loop = asyncio.get_running_loop()
-            protocol_factory = lambda: asyncio.subprocess.SubprocessStreamProtocol(limit=2 ** 16, loop=loop)
-            self.process = await loop.subprocess_shell(
-                protocol_factory,
-                self.start_script,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.server_path,
-            )
-        else:
-            self.process = await asyncio.create_subprocess_shell(
-                self.start_script,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.server_path,
-            )
+        self.process = await asyncio.create_subprocess_shell(
+            self.start_script,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            shell=True,
+            cwd=self.server_path,
+        )
 
     async def start(self):
         if self.process:
