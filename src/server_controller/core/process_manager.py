@@ -1,16 +1,19 @@
 import asyncio
-from pathlib import Path
-from config import ENV_NAME
 import os
 import platform
+import logging
+
+logging.basicConfig(level=logging.DEBUG)
+logger = logging.getLogger(__name__)
 
 
 class ProcessManager:
 
-    def __init__(self, start_script):
-        self.base_path = next(p for p in Path(__file__).resolve().parents if p.name == 'server_controller')
-        self.server_path = f'{self.base_path}/server' if ENV_NAME == 'prod' else f'{self.base_path}/testserver'
-        self.start_script = f'{self.server_path}/{start_script}'
+    def __init__(self, server_path, start_script, server_domain, timeout):
+        self.server_path = server_path
+        self.start_script = f"{server_path}/{start_script}"
+        self.server_domain = server_domain
+        self.timeout = timeout
         self.is_windows = platform.system() == "Windows"
         self.process = None
 
@@ -36,27 +39,15 @@ class ProcessManager:
             self.process = None
 
     async def create_process(self):
-
-        if self.is_windows:
-            asyncio.set_event_loop_policy(asyncio.WindowsProactorEventLoopPolicy())
-            loop = asyncio.get_running_loop()
-            protocol_factory = lambda: asyncio.subprocess.SubprocessStreamProtocol(limit=2 ** 16, loop=loop)
-            self.process = await loop.subprocess_shell(
-                protocol_factory,
-                self.start_script,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.server_path,
-            )
-        else:
-            self.process = await asyncio.create_subprocess_shell(
-                self.start_script,
-                stdin=asyncio.subprocess.PIPE,
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE,
-                cwd=self.server_path,
-            )
+        await asyncio.to_thread(lambda: os.chmod(self.server_path, 0o755))
+        self.process = await asyncio.create_subprocess_shell(
+            self.start_script,
+            stdin=asyncio.subprocess.PIPE,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            shell=True,
+            cwd=self.server_path,
+        )
 
     async def start(self):
         if self.process:

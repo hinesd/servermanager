@@ -1,7 +1,4 @@
 DISCORD_TOKEN=''
 TS_AUTHKEY=''
-CONTAINER_NAME='discord-bot-service'
 TAILSCALE_TAG='discord-bot-dev'
-EPHEMERAL_MODE='true'
-SERVER_DNS='domain-name-of-your-work-station'
 ENV_NAME='development'

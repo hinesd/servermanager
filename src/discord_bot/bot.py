@@ -1,7 +1,7 @@
 import discord
 import httpx
 from discord.ext import commands
-from config import DISCORD_TOKEN, SERVER_DNS
+from servermanager.settings.config import DISCORD_TOKEN, SERVER_DOMAIN
 
 intents = discord.Intents.default()
 intents.message_content = True
@@ -27,7 +27,7 @@ async def server_start(ctx):
     async with httpx.AsyncClient(timeout=90.0) as client:
         try:
             await ctx.send(f"Attempting to start server")
-            response = await client.get(f"http://{SERVER_DNS}/server/start")
+            response = await client.get(f"http://{SERVER_DOMAIN}/server/start")
             data = response.json()
             await ctx.send(f"Status Code: {data['status_code']}, Detail: {data['detail']}")
         except Exception as e:
@@ -44,7 +44,7 @@ async def server_stop(ctx):
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
             await ctx.send(f"Attempting to stop server")
-            response = await client.get(f"http://{SERVER_DNS}/server/stop")
+            response = await client.get(f"http://{SERVER_DOMAIN}/server/stop")
             data = response.json()
             await ctx.send(f"Status Code: {data['status_code']}, Detail: {data['detail']}")
         except Exception as e:
@@ -60,7 +60,7 @@ async def server_status(ctx):
         return
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
-            response = await client.get(f"http://{SERVER_DNS}/server/status")
+            response = await client.get(f"http://{SERVER_DOMAIN}/server/status")
             data = response.json()
             await ctx.send(f"Status Code: {data['status_code']}, Detail: {data['detail']}")
         except Exception as e:
