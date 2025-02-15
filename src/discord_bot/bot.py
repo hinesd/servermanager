@@ -1,7 +1,7 @@
 import discord
 import httpx
 from discord.ext import commands
-from config import DISCORD_TOKEN, SERVER_DNS
+from servermanager.settings.config import DISCORD_TOKEN, SERVER_DNS
 
 intents = discord.Intents.default()
 intents.message_content = True

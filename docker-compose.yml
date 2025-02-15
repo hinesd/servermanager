@@ -1,6 +1,4 @@
-version: '3.8'
 services:
-
   ts-oauth:
     image: tailscale/tailscale:latest
     container_name: ts-oauth
@@ -13,6 +11,8 @@ services:
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
       - ${PWD}/ts-oauth/state:/var/lib/tailscale
+    networks:
+      - server-network
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -20,15 +20,33 @@ services:
     restart: unless-stopped
 
   discord-bot:
+    container_name: discord-bot
     build:
-      dockerfile: Dockerfile
-      context: .
+      dockerfile: src/discord_bot/Dockerfile
+      context: ${PWD}
     env_file:
         - .env
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
-    container_name: discord-bot
-    network_mode: "service:ts-oauth"
+    networks:
+      - server-network
     depends_on:
       - ts-oauth
+      - server-controller
     restart: unless-stopped
+
+  server-controller:
+    build:
+      context: ${PWD}
+      dockerfile: src/server_controller/Dockerfile
+    env_file: .env
+    volumes:
+      - ${PWD}/server:/app/server
+    networks:
+      - server-network
+    ports:
+      - "80:80"
+
+networks:
+  server-network:
+    driver: bridge

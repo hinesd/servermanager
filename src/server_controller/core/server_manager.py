@@ -1,7 +1,6 @@
 from mcstatus import JavaServer
 import asyncio
-from config import SERVER_DNS, SERVER_CONNECTION_RETRIES
-from server_controller.core.process_manager import ProcessManager
+from core.process_manager import ProcessManager
 
 
 class ServerManager:
@@ -9,7 +8,7 @@ class ServerManager:
     def __init__(self, process_manager: ProcessManager):
         self.process_manager = process_manager
         self.server_properties = self._init_server_properties()
-        self.query_connection = JavaServer(SERVER_DNS, int(self.server_properties['server-port']), timeout=30)
+        self.query_connection = JavaServer(process_manager.SERVER_DNS, int(self.server_properties['server-port']), timeout=30)
 
     def _init_server_properties(self):
         # TODO
@@ -18,7 +17,7 @@ class ServerManager:
         return dict([x.split('=') for x in open(self.process_manager.server_path + '/server.properties').read().strip().split('\n')[2:]])
 
     async def init_server_connection(self):
-        max_retries = SERVER_CONNECTION_RETRIES
+        max_retries = self.process_manager.SERVER_CONNECTION_RETRIES
         while max_retries:
             try:
                 return await self.query_connection.async_ping()

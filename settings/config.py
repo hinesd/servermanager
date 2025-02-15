@@ -1,4 +1,5 @@
 import os
+from pathlib import Path
 from dotenv import load_dotenv
 
 # Load environment variables from .env file
@@ -13,4 +14,5 @@ TAILSCALE_TAG=os.getenv('TAILSCALE_TAG')
 EPHEMERAL_MODE=os.getenv('EPHEMERAL_MODE')
 ENV_NAME = os.getenv('ENV_NAME')
 START_SCRIPT = 'start_script.sh'
+SERVER_PATH = f"{Path(__file__).resolve().parent.parent}/server"
 SERVER_CONNECTION_RETRIES = 30
