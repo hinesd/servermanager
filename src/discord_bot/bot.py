@@ -8,12 +8,11 @@ intents.message_content = True
 bot = commands.Bot(command_prefix='$', intents=intents)
 
 safe_commands = {
-        'minecraft': ['server_start'],
+        'minecraft': ['server_start', 'server_status'],
         'admin': True
     }
 
 def check_channel_permissions(channel, command):
-
     permission = safe_commands.get(channel)
     return permission is True or (permission and command in permission)
 
@@ -22,7 +21,7 @@ async def server_start(ctx):
     channel_name = ctx.channel.name.lower()
     if not check_channel_permissions(channel_name, 'server_start'):
         if channel_name in safe_commands:
-            await ctx.send(f"This channel doesn't have permissions to use this command.")
+            await ctx.send(f"This is an admin only command")
         return
     async with httpx.AsyncClient(timeout=90.0) as client:
         try:
@@ -39,7 +38,7 @@ async def server_stop(ctx):
     channel_name = ctx.channel.name.lower()
     if not check_channel_permissions(channel_name, 'server_stop'):
         if channel_name in safe_commands:
-            await ctx.send(f"This channel doesn't have permissions to use this command.")
+            await ctx.send(f"This is an admin only command")
         return
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:
@@ -56,7 +55,7 @@ async def server_status(ctx):
     channel_name = ctx.channel.name.lower()
     if not check_channel_permissions(channel_name, 'server_status'):
         if channel_name in safe_commands:
-            await ctx.send(f"This channel doesn't have permissions to use this command.")
+            await ctx.send(f"This is an admin only command")
         return
     async with httpx.AsyncClient(timeout=30.0) as client:
         try:

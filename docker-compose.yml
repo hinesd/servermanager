@@ -31,7 +31,6 @@ services:
     networks:
       - server-network
     depends_on:
-      - ts-oauth
       - server-controller
     restart: unless-stopped
 
@@ -47,6 +46,7 @@ services:
       - server-network
     ports:
       - "80:80"
+    restart: unless-stopped
 
 networks:
   server-network:
