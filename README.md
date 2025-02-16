@@ -1,32 +1,29 @@
 # ServerManager
 
-Control a Minecraft Server from a discord bot using tailscale to connect containers and devices. 
+This project streamlines Minecraft server deployment and uses discord bot integration for seamless server management.
 
 ## Table of Contents
 - [Features](#features)
-- [Pre-Install Configurations](#System-Configurations)
+- [System Configurations](#System-Configurations)
 - [Installation](#installation)
 - [Usage](#usage)
 
-## Introduction
-ServerManager is an application that can be used to manage a minecraft server seamlessly with a discord bot.
 ## Features
-- Containerization using Docker
-- Networking setup and management through Tailnet
+- Containerized deployment using docker to ensure the application works on all Operating Systems
 - Discord bot for managing server operations
 
 ## System Configurations
+#### todo: automate away the need to copy sample files if hosting barebones minecraft server and not using optional configurations 
 
-1. **Install Java (LOCAL ONLY):**
-https://www.oracle.com/java/technologies/javase/jdk21-archive-downloads.html
-2. **Download Minecraft server.jar and place it in `servermanager/server`. If using modpack, extract modpack content into server folder:** https://www.minecraft.net/en-us/download/server
-3. **Install Docker Desktop:** https://www.docker.com/products/docker-desktop/
-4. **Add Device to Tailscale and configure Tags/ACL's:** https://tailscale.com/
-5. **create a `.env` file in `servermanager` using `.sample-env` as an example**
-4. **Generate Tailscale Oauth token and place it in `TS_AUTHKEY` in `.env`**
-5. **Take the Tag associated with the Oauth token and place it in `TAILSCALE_TAG`**
-6. **Create Discord Bot and add it to Discord Server:** https://discord.com/developers/applications
-7. **Generate Discord Bot Token and place it in `DISCORD_TOKEN` in `.env`**
+| <h5>**Configuration Step**     | <h5>**Required Configurations**                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+|--------------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1. Configure Minecraft Server  | - Place Minecraft server.jar in the `servermanager/server` directory for a barebones minecraft server. https://www.minecraft.net/en-us/download/server<br/><br>- Copy files from `servermanager/sample_files` into `servermanager/server` <br/><br/>- If using a modpack, extract the modpack's content into `servermanager/server` and make sure the server.jar and start scripts are present.                                                                                                       |
+| 2. Configure Local Environment | - Install Docker Desktop https://www.docker.com/products/docker-desktop/<br/><br/>- If the Minecraft Server requires custom configurations (Using a modpack or Optional Configurations) Create a `.env` file and place it in the `servermanager` directory. Default configurations exist in `.sample-env`<br/><br/>ie. specifying different `JAVA_VERSION`(Default version is 21)<br/> ie. specifying modpacks start script(Default uses `start_script.sh` located in `sample_files`) |
+
+| <h>**Configuration Step** | <h5>**Optional Configurations**                                                                                                                                                       |
+|---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
+| 1. Configure Discord Bot  | If using a discord bot for server manager controls, generate a bot token and place it in the `DISCORD_TOKEN` attribute in the `servermanager/.env` file to keep it private            |
+
 
 
 ## Installation
@@ -37,30 +34,24 @@ To get started with ServerManager, follow these steps:
     git clone https://github.com/hinesd/servermanager.git
     cd servermanager
     ```
+2. **Configure System:**<br/> Follow [System Configurations](#System-Configurations) instructions
 
-2. **Install the required Python packages:**
+3. **Build System:**
     ```sh
-    pip install -r requirements.txt
+    make build
     ```
-
-3. **Run local Minecraft server:**
+4. **Run System:**
     ```sh
-    python src/main.py
-    ```
-
-4. **Build/Run Discord Bot Docker container:**
-    ```sh
-    docker compose up --build
+    make run
     ```
 
 ## Usage
+### Bot commands
+1. **Running the server** - `$server_start`
+2. **Getting server status** - `$server_status`
+3. **Stopping the server** - `$server_stop`
 
-1. **Start server with discord bot command:**
-    ```sh
-    $start_server
-    ```
-
-2. **Stop server with discord bot command:**
-    ```sh
-    $stop_server
-    ```
+### API calls
+1. **Running the server** - http://0.0.0.0/server/start
+2. **Getting server status** - http://0.0.0.0/server/status
+3. **Stopping the server** - http://0.0.0.0/server/stop

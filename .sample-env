@@ -2,3 +2,6 @@
 #TS_AUTHKEY=''
 TAILSCALE_TAG='discord-bot-dev'
 ENV_NAME='development'
+JAVA_VERSION='21'
+START_SCRIPT='start_script.sh'
+EULA='true'
