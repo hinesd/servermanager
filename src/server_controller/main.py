@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.exceptions import *
 from core.server_manager import ServerManager, ProcessManager
-from servermanager.settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, SERVER_TIMEOUT
+from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, SERVER_TIMEOUT
 
 router = APIRouter()
 process_manager = None
