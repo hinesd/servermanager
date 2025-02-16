@@ -22,7 +22,7 @@ This project streamlines Minecraft server deployment and uses discord bot integr
 
 | <h>**Configuration Step** | <h5>**Optional Configurations**                                                                                                                                                       |
 |---------------------------|---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------|
-| 1. Configure Discord Bot  | If using a discord bot for server manager controls, generate a bot token and place it in the `DISCORD_TOKEN` attribute in the `servermanager/.env` file to keep it private            |
+| 1. Configure Discord Bot  | If using a discord bot for server manager controls, create a bot and then generate an auth token. place the auth token in `DISCORD_TOKEN` attribute in the `servermanager/.env` file to keep it private<br/> https://discord.com/developers/docs/intro|
 
 
 
