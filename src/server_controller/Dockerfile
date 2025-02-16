@@ -1,4 +1,5 @@
-FROM eclipse-temurin:21-jdk-jammy AS java-builder
+ARG JAVA_VERSION=21
+FROM eclipse-temurin:${JAVA_VERSION}-jdk AS java-builder
 
 FROM python:3.12
 WORKDIR /app
