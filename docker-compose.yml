@@ -1,5 +1,7 @@
 services:
   ts-oauth:
+    profiles:
+      - tailscale
     image: tailscale/tailscale:latest
     container_name: ts-oauth
     hostname: discord-bot-service-${ENV_NAME}
@@ -12,7 +14,9 @@ services:
     volumes:
       - ${PWD}/ts-oauth/state:/var/lib/tailscale
     networks:
-      - server-network
+      - minecraft-server-network
+    depends_on:
+      - server-controller
     devices:
       - /dev/net/tun:/dev/net/tun
     cap_add:
@@ -20,6 +24,8 @@ services:
     restart: unless-stopped
 
   discord-bot:
+    profiles:
+      - discord
     container_name: discord-bot
     build:
       dockerfile: src/discord_bot/Dockerfile
@@ -29,12 +35,14 @@ services:
     environment:
       - DISCORD_TOKEN=${DISCORD_TOKEN}
     networks:
-      - server-network
+      - minecraft-server-network
     depends_on:
       - server-controller
     restart: unless-stopped
 
   server-controller:
+    profiles:
+      - servercontroller
     container_name: server-controller
     build:
       context: ${PWD}
@@ -43,11 +51,11 @@ services:
     volumes:
       - ${PWD}/server:/app/server
     networks:
-      - server-network
+      - minecraft-server-network
     ports:
       - "80:80"
     restart: unless-stopped
 
 networks:
-  server-network:
+  minecraft-server-network:
     driver: bridge

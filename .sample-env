@@ -1,4 +1,4 @@
-DISCORD_TOKEN=''
-TS_AUTHKEY=''
+#DISCORD_TOKEN=''
+#TS_AUTHKEY=''
 TAILSCALE_TAG='discord-bot-dev'
 ENV_NAME='development'
