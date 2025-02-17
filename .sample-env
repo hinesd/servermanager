@@ -1,7 +1,12 @@
+# uncomment if needed
+
 #DISCORD_TOKEN=''
 #TS_AUTHKEY=''
+
+# Use either JAVA_INSTALL_SCRIPT or JAVA_VERSION, not BOTH
+#JAVA_INSTALL_SCRIPT=''
+#JAVA_VERSION='' # Use this if Modpack does not supply java install script
+
 TAILSCALE_TAG='discord-bot-dev'
 ENV_NAME='development'
-JAVA_VERSION='21'
 START_SCRIPT='start_script.sh'
-EULA='true'

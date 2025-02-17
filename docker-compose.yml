@@ -46,9 +46,10 @@ services:
     container_name: server-controller
     build:
       context: ${PWD}
-      dockerfile: src/server_controller/Dockerfile
+      dockerfile: src/server_controller/${JAVA_VERSION:+Dockerfile.java_build}${JAVA_INSTALL_SCRIPT:+Dockerfile.python_build}
       args:
         JAVA_VERSION: ${JAVA_VERSION}
+        JAVA_INSTALL_SCRIPT: ${JAVA_INSTALL_SCRIPT}
     env_file: .env
     volumes:
       - ${PWD}/server:/app/server

@@ -18,8 +18,13 @@ class ProcessManager:
         if not self.process:  # If no process
             raise ProcessDoesNotExist()
         if self.process.returncode is not None:  # If process is not running
+            error_message = 'Process validation failed.'
+            #todo find more memory efficient approach
             stdout, stderr = await self.process.communicate()
-            error_message = f"Process validation failed:\nSTDOUT: {stdout.decode()}\nSTDERR: {stderr.decode()}"
+            if stdout.decode():
+                error_message += f"\nSTDOUT: {stdout.decode()[-500:]}"
+            if stderr.decode():
+                error_message += f"\nSTDERR: {stderr.decode()[-500:]}"
             await self.kill_process()
             raise ProcessValidationFailed(error_message)
 
@@ -37,6 +42,8 @@ class ProcessManager:
 
     async def create_process(self):
         await asyncio.to_thread(lambda: os.chmod(self.server_path, 0o755))
+        await asyncio.to_thread(lambda: os.chmod(self.start_script, 0o755))
+
         self.process = await asyncio.create_subprocess_shell(
             self.start_script,
             stdin=asyncio.subprocess.PIPE,
@@ -67,27 +74,38 @@ class ServerManager:
 
     def __init__(self, process_manager: ProcessManager):
         self.process_manager = process_manager
-        self.server_properties = self._init_server_properties()
-        self.query_connection = JavaServer(process_manager.server_domain, int(self.server_properties['server-port']), timeout=30)
+        self.server_properties = None
+        self.query_connection = None
 
-    def _init_server_properties(self):
-        # TODO
-        #  add logic to dynamically override server.properties using attributes defined in config.py before load
-        #  add logic to dynamically load start_script configs into settings.sh defined in config.py before load
-        return dict([x.split('=') for x in open(self.process_manager.server_path + '/server.properties').read().strip().split('\n')[2:]])
+    async def init_server_properties(self):
+        properties_path = self.process_manager.server_path + '/server.properties'
+        if await asyncio.to_thread(os.path.exists, properties_path):
+            self.server_properties = dict([x.split('=') for x in open(properties_path).read().strip().split('\n')[2:]])
+        if not self.query_connection:
+            self.query_connection = JavaServer(self.process_manager.server_domain,int(self.server_properties['server-port']), timeout=30)
+        return None
 
     async def init_server_connection(self):
         timeout = self.process_manager.timeout
         increment = 3
         while timeout > 0:
-            try:
-                return await self.query_connection.async_ping()
-            except ConnectionRefusedError:
-                await asyncio.sleep(increment)
-                timeout -= increment
-            except Exception as e:
-                await self.process_manager.stop()
-                raise e
+            await self.process_manager.validate_process()
+            if not self.query_connection:
+                await self.init_server_properties()
+            else:
+                try:
+                    return await self.query_connection.async_ping()
+                except ConnectionRefusedError:
+                    pass
+                except ProcessValidationFailed as e:
+                    await self.process_manager.stop()
+                    raise e
+                except Exception as e:
+                    await self.process_manager.stop()
+                    raise e
+                finally:
+                    await asyncio.sleep(increment)
+                    timeout -= increment
         await self.process_manager.stop()
         raise ConnectionRefusedError()
 
