@@ -26,5 +26,5 @@ TAILSCALE_TAG=os.getenv('TAILSCALE_TAG')
 SERVER_DOMAIN = os.getenv('SERVER_DNS', get_ip_address())
 ENV_NAME = os.getenv('ENV_NAME')
 START_SCRIPT = os.getenv('START_SCRIPT')
-SERVER_PATH = f"{Path(__file__).resolve().parent.parent}/server"
+SERVER_PATH = f"{Path(__file__).resolve().parent.parent.parent}/server"
 SERVER_TIMEOUT = 120

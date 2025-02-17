@@ -2,7 +2,7 @@ import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.exceptions import *
 from core.server_manager import ServerManager, ProcessManager
-from servermanager.settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, SERVER_TIMEOUT
+from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, SERVER_TIMEOUT
 
 router = APIRouter()
 process_manager = None
@@ -19,9 +19,11 @@ async def start_server():
         server_manager = ServerManager(process_manager)
         await process_manager.start()
         await server_manager.init_server_connection()
-    except (ProcessValidationFailed, FileNotFoundError, ConnectionRefusedError) as e:
+    except (ProcessValidationFailed, ProcessCreationFailed, FileNotFoundError, ConnectionRefusedError) as e:
         process_manager = None
         server_manager = None
+        if 'Go to eula.txt for more info' in str(e):
+            return {"status_code": 500, "detail": "Accept the EULA. modify the eula.txt file"}
         return {"status_code": 500, "detail": str(e)}
 
     return {"status_code": 200, "detail": 'Server Started'}

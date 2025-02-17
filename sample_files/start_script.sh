@@ -1,5 +1,5 @@
 #!/bin/sh
-
+# These sample files can be used to host a barebones minecraft server
 # Read the settings.
 . ./settings.sh
 
