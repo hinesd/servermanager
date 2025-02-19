@@ -4,11 +4,11 @@ services:
       - tailscale
     image: tailscale/tailscale:latest
     container_name: ts-oauth
-    hostname: discord-bot-service-${ENV_NAME}
+    hostname: discord-bot-service-${TAILSCALE_HOST_ENV}
     env_file:
       - .env
     environment:
-      - TS_AUTHKEY=${TS_AUTHKEY}?ephemeral=false
+      - TAILSCALE_AUTHKEY=${TAILSCALE_AUTHKEY}?ephemeral=false
       - TS_EXTRA_ARGS=--advertise-tags=tag:${TAILSCALE_TAG}
       - TS_STATE_DIR=/var/lib/tailscale
     volumes:
@@ -46,10 +46,10 @@ services:
     container_name: server-controller
     build:
       context: ${PWD}
-      dockerfile: src/server_controller/${JAVA_VERSION:+Dockerfile.java_build}${JAVA_INSTALL_SCRIPT:+Dockerfile.python_build}
+      dockerfile: src/server_controller/Dockerfile
       args:
         JAVA_VERSION: ${JAVA_VERSION}
-        JAVA_INSTALL_SCRIPT: ${JAVA_INSTALL_SCRIPT}
+        START_SCRIPT: ${START_SCRIPT}
     env_file: .env
     volumes:
       - ${PWD}/server:/app/server
