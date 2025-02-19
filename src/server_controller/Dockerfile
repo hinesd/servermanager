@@ -1,11 +1,11 @@
 ARG JAVA_VERSION=21
+ARG START_SCRIPT
 FROM eclipse-temurin:${JAVA_VERSION}-jdk AS java-builder
 
 FROM python:3.12
 WORKDIR /app
-# Copy Java from the java-base stage
+
 COPY --from=java-builder /opt/java/openjdk /opt/java/openjdk
-# Set up Java environment variables
 ENV JAVA_HOME=/opt/java/openjdk
 ENV PATH="${JAVA_HOME}/bin:${PATH}"
 
