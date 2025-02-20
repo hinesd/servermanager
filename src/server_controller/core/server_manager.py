@@ -1,74 +1,53 @@
-from mcstatus import JavaServer
 from datetime import datetime, timedelta
-import asyncio
+from asyncio import sleep, wait_for, to_thread, create_subprocess_shell
+from asyncio.subprocess import PIPE
 import os
-from core.exceptions import *
+from core.exceptions import ProcessNotRunning, ProcessDoesNotExist, ProcessAlreadyExistsError, CommandNotAllowed
 import logging
-
-from server_controller.core.exceptions import ProcessNotRunning
 
 logging.basicConfig(level=logging.DEBUG)
 allowed_commands = ['I agree', 'true', 'True', 'stop']
 
 class ProcessManager:
 
-    def __init__(self, server_path, start_script, server_domain, install_script=None, timeout=90):
+    def __init__(self, server_path, start_script, server_domain, timeout=90):
         self.server_path = server_path
         self.start_script = f"{server_path}/{start_script}"
-        self.install_script = f"{server_path}/{install_script}" if install_script else None
         self.server_domain = server_domain
         self.timeout = timeout
         self.process = None
-        self.process_log_out = ''
-        self.process_log_err = ''
+        self.process_log_stdout = ''
+        self.process_log_stderr = ''
 
 
-
-    async def process_log_stream(self):
-        async def get_logs():
-            out = ''
-            err = ''
+    async def _process_log_stream(self):
+        # todo figure out why initial create doesnt generate logs
+        async def get_stream(stream):
             try:
-                chunk = await asyncio.wait_for(self.process.stdout.read(1024), .1)  # Read 1KB at a time
-                out += chunk.decode()
+                chunk = await wait_for(getattr(self.process, stream).read(1024), .1)  # Read 1KB at a time
+                if chunk:
+                    logging.debug(chunk)
+                    new_log = self.process_log_stdout + chunk.decode()
+                    setattr(self, f'process_log_{stream}', new_log)
+                    
             except (ProcessLookupError, ConnectionResetError, TimeoutError):
                 pass
-            try:
-                chunk = await asyncio.wait_for(self.process.stderr.read(1024), .1)  # Read 1KB at a time
-                err += chunk.decode()
-            except (ProcessLookupError, ConnectionResetError, TimeoutError):
-                pass
-            if out:
-                logging.debug(out)
-                self.process_log_out += out
-            if err:
-                logging.debug(err)
-                self.process_log_err += err
-            if out or err:
-                return True
-
-        last_updated = datetime.now()
         current_time = datetime.now()
-        timeout = current_time + timedelta(seconds=self.timeout)
-
-        while current_time < timeout and current_time - last_updated < timedelta(seconds=5):
-            if await get_logs():
+        last_updated = datetime.now()
+        while current_time - last_updated < timedelta(seconds=5):
+            if await get_stream('stdout') or await get_stream('stderr'):
                 last_updated = datetime.now()
             current_time = datetime.now()
 
-        if datetime.now() > timeout:
-            raise LongRunningProcess()
 
-
-    async def validate_process_status(self):
+    async def _validate_process_status(self):
+        if not self.process_log_stdout:
+            self.process_log_stdout = ''
+        if not self.process_log_stderr:
+            self.process_log_stderr = ''
         if not self.process:
             raise ProcessDoesNotExist()
-
-        try:
-            await self.process_log_stream()
-        except LongRunningProcess:
-            raise LongRunningProcess()
-
+        await self._process_log_stream()
         if self.process.returncode is not None:
             try:
                 self.process.kill()
@@ -78,41 +57,23 @@ class ProcessManager:
             raise ProcessNotRunning()
 
 
-    async def create_process(self, script):
-        if not await asyncio.to_thread(os.path.exists, script):
+    async def _create_process(self, script):
+        if not await to_thread(os.path.exists, script):
             raise FileNotFoundError(script)
         if self.process:
             raise ProcessAlreadyExistsError()
+        self.process = await create_subprocess_shell(f'bash {script}', stdin=PIPE,stdout=PIPE,stderr=PIPE,shell=True,cwd=self.server_path)
+        await sleep(3)
+        await self._validate_process_status()
 
-        self.process = await asyncio.create_subprocess_shell(
-            f'bash {script}', stdin=asyncio.subprocess.PIPE,stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,shell=True,cwd=self.server_path,
-        )
 
+    async def _kill_process(self, graceful=True):
         try:
-            await asyncio.sleep(3)
-            await self.validate_process_status()
-        except ProcessNotRunning:
-            if script != self.install_script:
-                raise ProcessCreationFailed()
-            raise ProcessNotRunning()
-
-
-    async def send_command(self, command):
-        if command not in allowed_commands:
-            raise CommandNotAllowed(command)
-        await self.validate_process_status()
-        self.process.stdin.write(f'{command}\n'.encode('utf-8'))
-        try:
-            await self.validate_process_status()
-        except ProcessNotRunning:
-            pass
-
-
-    async def kill_process(self):
-        try:
-            await self.send_command('stop')
-            await asyncio.wait_for(self.process.wait(), timeout=3)
+            if graceful:
+                await self.send_command('stop')
+            else:
+                self.process.kill()
+            await wait_for(self.process.wait(), timeout=10)
         except TimeoutError:
             self.process.kill()
             await self.process.wait()
@@ -122,86 +83,37 @@ class ProcessManager:
             self.process = None
 
 
-    async def additional_install(self):
+    async def get_logs(self, stdout=False, stderr=False, reverse=True, consume=False):
         try:
-            await self.create_process(self.install_script)
-        except LongRunningProcess:
-            raise LongRunningProcess("Additional install is still running")
+            await self._validate_process_status()
+        except (ProcessNotRunning, ProcessDoesNotExist):
+            pass
+        if not self.process_log_stdout or not self.process_log_stderr:
+            return "No Logs Found"
+        stream_attribute = 'process_log_stdout' if stdout or not stdout and not stderr else 'process_log_stderr'
+        if not getattr(self, stream_attribute):
+            return f"No logs in {stream_attribute}. set 'stdout' or 'stderr' to True to find logs"
+        if consume:
+            output = getattr(self, stream_attribute)
+            setattr(self, stream_attribute, None)
+            return output
+        output = getattr(self, stream_attribute)[-1000:] if reverse else getattr(self, stream_attribute)[:1000]
+        setattr(self, stream_attribute, getattr(self, stream_attribute)[:-1000]) if reverse else setattr(self, stream_attribute, getattr(self, stream_attribute)[1000:])
+        return output
+
+
+    async def send_command(self, command):
+        if command not in allowed_commands:
+            raise CommandNotAllowed(command)
+        await self._validate_process_status()
+        self.process.stdin.write(f'{command}\n'.encode('utf-8'))
+        await self._validate_process_status()
 
 
     async def start(self):
-        await self.create_process(self.start_script)
+        await self._create_process(self.start_script)
 
 
     async def stop(self):
-        try:
-            await self.validate_process_status()
-        except (LongRunningProcess, ProcessNotRunning):
-            pass
-        await self.kill_process()
-
-
-    async def process_status(self):
-        try:
-            await self.validate_process_status()
-        except ProcessNotRunning:
-            pass
-        # consume logs
-        process_log_out = None
-        process_log_err = None
-        if self.process_log_out:
-            process_log_out = self.process_log_out[:1000]
-            self.process_log_out = self.process_log_out[1000:]
-        if self.process_log_err:
-            process_log_err = self.process_log_err[:1000]
-            self.process_log_err = self.process_log_err[1000:]
-
-        return process_log_out, process_log_err
-
-class ServerManager:
-
-    def __init__(self, process_manager: ProcessManager):
-        self.process_manager = process_manager
-        self.server_properties = None
-        self.query_connection = None
-
-    async def init_server_properties(self):
-        properties_path = self.process_manager.server_path + '/server.properties'
-        if await asyncio.to_thread(os.path.exists, properties_path):
-            self.server_properties = dict([x.split('=') for x in open(properties_path).read().strip().split('\n')[2:]])
-        if not self.query_connection:
-            self.query_connection = JavaServer(self.process_manager.server_domain,int(self.server_properties['server-port']), timeout=30)
-        return None
-
-    async def init_server_connection(self):
-        timeout = self.process_manager.timeout
-        increment = 3
-        while timeout > 0:
-            await self.process_manager.validate_process_status()
-            if not self.query_connection:
-                await self.init_server_properties()
-            else:
-                try:
-                    return await self.query_connection.async_ping()
-                except ConnectionRefusedError:
-                    pass
-                except ProcessValidationFailed as e:
-                    await self.process_manager.stop()
-                    raise e
-                except Exception as e:
-                    await self.process_manager.stop()
-                    raise e
-                finally:
-                    await asyncio.sleep(increment)
-                    timeout -= increment
-        await self.process_manager.stop()
-        raise ConnectionRefusedError()
-
-    async def server_status(self, query=None):
-        await self.process_manager.validate_process_status()
-        results = (await self.query_connection.async_status()).__dict__
-        return results
-        # TODO
-        #  add logic to customize the query
-        #  add logic to track uptime
-        #  add logic to track time since last player connection
+        await self._validate_process_status()
+        await self._kill_process()

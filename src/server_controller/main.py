@@ -1,136 +1,85 @@
 import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.exceptions import *
-from core.server_manager import ServerManager, ProcessManager
-from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN, ADDITIONAL_INSTALL_SCRIPT
+from core.server_manager import ProcessManager
+from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN
 
 router = APIRouter()
-process_manager = None
-server_manager = None
-
+process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN)
 
 @router.get("/server/start")
 async def start_server():
     global process_manager
-    global server_manager
-    if not process_manager:
-        process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN, ADDITIONAL_INSTALL_SCRIPT)
-        server_manager = ServerManager(process_manager)
-
-    message = None
+    message = {}
     status = 200
 
     try:
         await process_manager.start()
-    except (FileNotFoundError, NoAdditionalScript) as e:
+    except (FileNotFoundError, ProcessAlreadyExistsError) as e:
         message = {"error":e.message}
         status = 500
-    except (ProcessNotRunning, ProcessCreationFailed):
-        status = 200
+    except ProcessNotRunning:
+        pass
+    except Exception as e:
+        raise e
     finally:
         if not message:
-            try:
-                process_log_out, process_log_err = await process_manager.process_status()
-                message = {"stdout": process_log_out, "stderr": process_log_err}
-            except ProcessDoesNotExist as e:
-                message = {"error": e.message}
-                status = 500
+            output = await process_manager.get_logs()
+            message = {'logs':output}
+
     result = {"status_code": status}
     result.update(message)
     return result
 
-
-@router.get("/server/additional_install")
-async def additional_install():
-    global process_manager
-    global server_manager
-    if not process_manager:
-        process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN, ADDITIONAL_INSTALL_SCRIPT)
-        server_manager = ServerManager(process_manager)
-
-    message = None
-    status = 200
-    try:
-        await process_manager.additional_install()
-    except (ProcessNotRunning, ProcessCreationFailed, FileNotFoundError, NoAdditionalScript) as e:
-        message = {"error": e.message}
-        status = 500
-    except LongRunningProcess:
-        status = 102
-    finally:
-        if not message:
-            try:
-                process_log_out, process_log_err = await process_manager.process_status()
-                message = {"stdout": process_log_out, "stderr": process_log_err}
-            except ProcessDoesNotExist as e:
-                message = {"error": e.message}
-                status = 500
-    result = {"status_code": status}
-    result.update(message)
-    return result
 @router.get("/server/stop")
 async def stop_server():
     global process_manager
-    global server_manager
-    if process_manager is None:
-        return HTTPException(status_code=500, detail="Server has not been initialized")
-    message = None
+    message = {}
     status = 200
+
     try:
         await process_manager.stop()
-        process_manager = None
-        server_manager = None
-    except (ProcessValidationFailed) as e:
+    except (ProcessDoesNotExist, CommandNotAllowed) as e:
         message = {"error": e.message}
         status = 500
+    except ProcessNotRunning:
+        pass
     finally:
         if not message:
-            try:
-                process_log_out, process_log_err = await process_manager.process_status()
-                message = {"stdout": process_log_out, "stderr": process_log_err}
-            except ProcessDoesNotExist as e:
-                message = {"error": e.message}
-                status = 500
+            output = await process_manager.get_logs()
+            message = {'logs': output}
+
     result = {"status_code": status}
     result.update(message)
     return result
 
+
 @router.get("/server/status")
-async def server_status(query: str | None = None):
-    if process_manager is None:
-        raise HTTPException(status_code=500, detail="Server has not been initialized")
-    message = None
+async def server_status(stdout: bool = False, stderr: bool = False, reverse: bool = False, consume: bool = False):
     status = 200
-    try:
-        process_log_out, process_log_err = await process_manager.process_status()
-    except ProcessDoesNotExist as e:
-        message = {"error": e.message}
-        status = 500
-    except LongRunningProcess:
-        status = 102
-    except ProcessNotRunning:
-        status = 200
-    finally:
-        if not message:
-            try:
-                process_log_out, process_log_err = await process_manager.process_status()
-                message = {"stdout": process_log_out, "stderr": process_log_err}
-            except ProcessDoesNotExist as e:
-                message = {"error": e.message}
-                status = 500
-    result = {"status_code": status}
-    result.update(message)
+    output = await process_manager.get_logs(stdout=stdout, stderr=stderr, reverse=reverse, consume=consume)
+    result = {"status_code": status, 'logs': output}
     return result
+
 
 @router.get("/server/send_command")
 async def send_command(command: str | None = None):
-    if process_manager is None:
-        raise HTTPException(status_code=500, detail="Server has not been initialized")
+    global process_manager
+    message = {}
+    status = 200
     try:
-        process_log_out, process_log_err = await process_manager.send_command(command)
-    except CommandNotAllowed as e:
-        return {"status_code": 500, "detail": str(e)}
-    return {"status_code": 200, "stdout": process_log_out, "stderr": process_log_err}
+        await process_manager.send_command(command)
+    except (ProcessDoesNotExist, ProcessNotRunning, CommandNotAllowed) as e:
+        message = {"error": e.message}
+        status = 500
+    finally:
+        if not message:
+            output = await process_manager.get_logs()
+            message = {'logs': output}
+
+    result = {"status_code": status}
+    result.update(message)
+    return result
 
 app = FastAPI()
 app.include_router(router)
