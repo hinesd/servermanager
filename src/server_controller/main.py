@@ -55,9 +55,9 @@ async def stop_server():
 
 
 @router.get("/server/status")
-async def server_status(stdout: bool = False, stderr: bool = False, reverse: bool = False, consume: bool = False):
+async def server_status():
     status = 200
-    output = await process_manager.get_logs(stdout=stdout, stderr=stderr, reverse=reverse, consume=consume)
+    output = await process_manager.get_logs()
     result = {"status_code": status, 'logs': output}
     return result
 
