@@ -2,10 +2,10 @@ import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.exceptions import *
 from core.server_manager import ProcessManager
-from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN
+from settings.config import START_SCRIPT, ROOT_PATH, SERVER_DOMAIN
 
 router = APIRouter()
-process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN)
+process_manager = ProcessManager(ROOT_PATH, START_SCRIPT, SERVER_DOMAIN)
 
 @router.get("/server/start")
 async def start_server():

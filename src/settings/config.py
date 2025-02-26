@@ -27,4 +27,4 @@ SERVER_DOMAIN = os.getenv('SERVER_DNS', get_ip_address())
 TAILSCALE_HOST_ENV = os.getenv('TAILSCALE_HOST_ENV')
 START_SCRIPT = os.getenv('START_SCRIPT')
 ADDITIONAL_INSTALL_SCRIPT = os.getenv('ADDITIONAL_INSTALL_SCRIPT')
-SERVER_PATH = f"{Path(__file__).resolve().parent.parent.parent}/server"
+ROOT_PATH = f"{Path(__file__).resolve().parent.parent.parent}"

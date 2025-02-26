@@ -1,7 +1,8 @@
 from datetime import datetime, timedelta
-from asyncio import sleep, wait_for, to_thread, create_subprocess_shell
+from asyncio import sleep, wait_for, to_thread, create_subprocess_shell, Queue, QueueEmpty
 from asyncio.subprocess import PIPE, STDOUT
 import os
+import aiofiles
 from core.exceptions import ProcessNotRunning, ProcessDoesNotExist, ProcessAlreadyExistsError, CommandNotAllowed
 import logging
 
@@ -11,17 +12,18 @@ allowed_commands = {'I agree', 'true', 'True', 'stop'}
 
 class ProcessManager:
 
-    def __init__(self, server_path, start_script, server_domain, timeout=90):
-        self.server_path = server_path
-        self.start_script = f"{server_path}/{start_script}"
+    def __init__(self, root_path, start_script, server_domain, timeout=90):
+        self.root_path = root_path
+        self.server_path = f"{root_path}/server"
+        self.log_file_path = f"{root_path}/logs/latest.log"
+        self.start_script = f"{self.server_path}/{start_script}"
         self.server_domain = server_domain
         self.timeout = timeout
         self.process = None
-        self.process_log = ''
+        self.process_log = Queue()
 
 
     async def _process_log_stream(self):
-
         current_time = datetime.now()
         last_updated = datetime.now()
         new_logs = ''
@@ -38,13 +40,25 @@ class ProcessManager:
                 break
             current_time = datetime.now()
             await sleep(.05)
-        self.process_log = self.process_log + new_logs
+        await self.process_log.put(new_logs)
+
+
+    async def _dump_logs(self):
+        try:
+            logs = self.process_log.get_nowait()
+            while logs:
+                async with aiofiles.open(self.log_file_path, 'a') as file:
+                    await file.write(logs)
+                logs = self.process_log.get_nowait()
+        except QueueEmpty:
+            pass
 
 
     async def _validate_process_status(self):
         if not self.process:
             raise ProcessDoesNotExist()
         await self._process_log_stream()
+        await self._dump_logs()
         if self.process.returncode is not None:
             try:
                 self.process.kill()
@@ -61,6 +75,9 @@ class ProcessManager:
             raise ProcessAlreadyExistsError()
         self.process = await create_subprocess_shell(f'bash {script}', stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True, cwd=self.server_path, start_new_session=True)
         await sleep(3)
+        # Ensure the file is empty before starting to write logs
+        async with aiofiles.open(self.log_file_path, 'w') as file:
+            await file.write('')
         await self._validate_process_status()
 
 
@@ -100,13 +117,17 @@ class ProcessManager:
 
 
     async def get_logs(self):
-        # TEMP get logs until file dumping logic is completed
+        # Read logs from the log file
         try:
             await self._validate_process_status()
         except (ProcessNotRunning, ProcessDoesNotExist):
             pass
-        if not self.process_log:
-            return "No Logs Found"
-        output = self.process_log
-        self.process_log = ''
-        return output
+
+        try:
+            async with aiofiles.open(self.log_file_path, 'r') as file:
+                output = await file.read()
+            if not output:
+                return "No Logs Found"
+            return output
+        except FileNotFoundError:
+            return "Log file not found"
