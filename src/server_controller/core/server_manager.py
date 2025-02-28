@@ -2,6 +2,7 @@ from datetime import datetime, timedelta
 from asyncio import sleep, wait_for, to_thread, create_subprocess_shell, Queue, QueueEmpty
 from asyncio.subprocess import PIPE, STDOUT
 import os
+import gzip
 import aiofiles
 from core.exceptions import ProcessNotRunning, ProcessDoesNotExist, ProcessAlreadyExistsError, CommandNotAllowed
 import logging
@@ -10,12 +11,18 @@ logging.basicConfig(level=logging.DEBUG)
 allowed_commands = {'I agree', 'true', 'True', 'stop'}
 
 
+def write_gzip(gzip_file_path, output):
+    with gzip.open(gzip_file_path, 'wb') as gz:
+        gz.write(output.encode('utf-8'))
+
+
 class ProcessManager:
 
     def __init__(self, root_path, start_script, server_domain, timeout=90):
         self.root_path = root_path
         self.server_path = f"{root_path}/server"
-        self.log_file_path = f"{root_path}/logs/latest.log"
+        self.log_path = f"{root_path}/logs"
+        self.log_file_path = f"{self.log_path}/latest.log"
         self.start_script = f"{self.server_path}/{start_script}"
         self.server_domain = server_domain
         self.timeout = timeout
@@ -54,6 +61,17 @@ class ProcessManager:
             pass
 
 
+    async def _flush_logs(self):
+        # Ensure the file is empty before processing new logs
+        async with aiofiles.open(self.log_file_path, 'r') as file:
+            output = await file.read()
+            if output:
+                gzip_file_path = f"{self.log_path}/logs_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.gz"
+                await to_thread(write_gzip, gzip_file_path, output)
+        async with aiofiles.open(self.log_file_path, 'w') as file:
+            await file.write('')
+
+
     async def _validate_process_status(self):
         if not self.process:
             raise ProcessDoesNotExist()
@@ -73,11 +91,9 @@ class ProcessManager:
             raise FileNotFoundError(script)
         if self.process:
             raise ProcessAlreadyExistsError()
+        await self._flush_logs()
         self.process = await create_subprocess_shell(f'bash {script}', stdin=PIPE, stdout=PIPE, stderr=STDOUT, shell=True, cwd=self.server_path, start_new_session=True)
         await sleep(3)
-        # Ensure the file is empty before starting to write logs
-        async with aiofiles.open(self.log_file_path, 'w') as file:
-            await file.write('')
         await self._validate_process_status()
 
 
@@ -98,6 +114,7 @@ class ProcessManager:
 
 
     async def send_command(self, command):
+        #todo improve/secure terminal access
         if command not in allowed_commands:
             raise CommandNotAllowed(command)
         await self._validate_process_status()
@@ -122,7 +139,6 @@ class ProcessManager:
             await self._validate_process_status()
         except (ProcessNotRunning, ProcessDoesNotExist):
             pass
-
         try:
             async with aiofiles.open(self.log_file_path, 'r') as file:
                 output = await file.read()
