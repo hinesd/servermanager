@@ -2,10 +2,10 @@ import uvicorn
 from fastapi import APIRouter, HTTPException, FastAPI
 from core.exceptions import *
 from core.server_manager import ProcessManager
-from settings.config import START_SCRIPT, SERVER_PATH, SERVER_DOMAIN
+from settings.config import START_SCRIPT, ROOT_PATH, SERVER_DOMAIN
 
 router = APIRouter()
-process_manager = ProcessManager(SERVER_PATH, START_SCRIPT, SERVER_DOMAIN)
+process_manager = ProcessManager(ROOT_PATH, START_SCRIPT, SERVER_DOMAIN)
 
 @router.get("/server/start")
 async def start_server():
@@ -55,9 +55,9 @@ async def stop_server():
 
 
 @router.get("/server/status")
-async def server_status(stdout: bool = False, stderr: bool = False, reverse: bool = False, consume: bool = False):
+async def server_status():
     status = 200
-    output = await process_manager.get_logs(stdout=stdout, stderr=stderr, reverse=reverse, consume=consume)
+    output = await process_manager.get_logs()
     result = {"status_code": status, 'logs': output}
     return result
 
