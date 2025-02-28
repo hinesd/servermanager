@@ -18,7 +18,7 @@ def write_gzip(gzip_file_path, output):
 
 class ProcessManager:
 
-    def __init__(self, root_path, start_script, server_domain, timeout=90):
+    def __init__(self, root_path, start_script, server_domain, timeout=30):
         self.root_path = root_path
         self.server_path = f"{root_path}/server"
         self.log_path = f"{root_path}/logs"
@@ -27,19 +27,19 @@ class ProcessManager:
         self.server_domain = server_domain
         self.timeout = timeout
         self.process = None
-        self.process_log = Queue()
+        self.log_buffer = ''
+        self.log_queue = Queue()
 
 
     async def _process_log_stream(self):
         current_time = datetime.now()
         last_updated = datetime.now()
-        new_logs = ''
         while current_time - last_updated < timedelta(seconds=5):
             try:
                 chunk = await wait_for(self.process.stdout.read(128), .1)
                 if chunk:
                     logging.debug(chunk)
-                    new_logs = new_logs + chunk.decode()
+                    self.log_buffer = self.log_buffer + chunk.decode()
                     last_updated = datetime.now()
             except TimeoutError:
                 pass
@@ -47,35 +47,42 @@ class ProcessManager:
                 break
             current_time = datetime.now()
             await sleep(.05)
-        await self.process_log.put(new_logs)
 
 
     async def _dump_logs(self):
         try:
-            logs = self.process_log.get_nowait()
+            logs = self.log_queue.get_nowait()
             while logs:
                 async with aiofiles.open(self.log_file_path, 'a') as file:
                     await file.write(logs)
-                logs = self.process_log.get_nowait()
+                logs = self.log_queue.get_nowait()
         except QueueEmpty:
             pass
 
 
     async def _flush_logs(self):
-        # Ensure the file is empty before processing new logs
-        async with aiofiles.open(self.log_file_path, 'r') as file:
-            output = await file.read()
-            if output:
-                gzip_file_path = f"{self.log_path}/logs_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.gz"
-                await to_thread(write_gzip, gzip_file_path, output)
-        async with aiofiles.open(self.log_file_path, 'w') as file:
-            await file.write('')
+        try:
+            async with aiofiles.open(self.log_file_path, 'r') as file:
+                output = await file.read()
+                if output:
+                    gzip_file_path = f"{self.log_path}/logs_{datetime.now().strftime("%Y-%m-%d_%H:%M:%S")}.gz"
+                    await to_thread(write_gzip, gzip_file_path, output)
+        except FileNotFoundError:
+            pass
+        finally:
+            async with aiofiles.open(self.log_file_path, 'w') as file:
+                await file.write('')
 
 
     async def _validate_process_status(self):
         if not self.process:
             raise ProcessDoesNotExist()
-        await self._process_log_stream()
+        try:
+            await wait_for(self._process_log_stream(), timeout=self.timeout)
+        except TimeoutError:
+            pass # todo better handle timeouts and make sure it works consistently
+        await self.log_queue.put(self.log_buffer)
+        self.log_buffer = ''
         await self._dump_logs()
         if self.process.returncode is not None:
             try:
@@ -133,7 +140,7 @@ class ProcessManager:
         await self._kill_process()
 
 
-    async def get_logs(self):
+    async def get_logs(self, flush_logs=False):
         # Read logs from the log file
         try:
             await self._validate_process_status()
@@ -144,6 +151,8 @@ class ProcessManager:
                 output = await file.read()
             if not output:
                 return "No Logs Found"
+            if flush_logs:
+                await self._flush_logs()
             return output
         except FileNotFoundError:
             return "Log file not found"
