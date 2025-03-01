@@ -32,15 +32,18 @@ class ProcessManager:
 
 
     async def _process_log_stream(self):
+        start_time = datetime.now()
         current_time = datetime.now()
         last_updated = datetime.now()
-        while current_time - last_updated < timedelta(seconds=5):
+        while current_time - last_updated < timedelta(seconds=5) and current_time - start_time < timedelta(seconds=self.timeout):
             try:
                 chunk = await wait_for(self.process.stdout.read(128), .1)
                 if chunk:
                     logging.debug(chunk)
                     self.log_buffer = self.log_buffer + chunk.decode()
                     last_updated = datetime.now()
+                else:
+                    await sleep(.5)
             except TimeoutError:
                 pass
             except (ProcessLookupError, ConnectionResetError):
@@ -78,7 +81,7 @@ class ProcessManager:
         if not self.process:
             raise ProcessDoesNotExist()
         try:
-            await wait_for(self._process_log_stream(), timeout=self.timeout)
+            await self._process_log_stream()
         except TimeoutError:
             pass # todo better handle timeouts and make sure it works consistently
         await self.log_queue.put(self.log_buffer)
