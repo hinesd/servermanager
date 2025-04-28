@@ -3,3 +3,5 @@
 ts-oauth
 server/*
 !server/.gitkeep
+logs/*
+!logs/.gitkeep
