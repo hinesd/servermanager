@@ -1,6 +1,9 @@
 # ServerManager
 
 This project streamlines Minecraft server deployment and uses discord bot integration for seamless server management.
+> [!WARNING]
+> I am no longer working on this project because https://docs.python.org/3/library/asyncio-subprocess.html does not give me the level of control required to manage a minecraft server.
+> It worked ok with a basic minecraft server, but I could not get it working with modpacks. 
 
 ## Table of Contents
 - [Features](#features)
