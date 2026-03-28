@@ -53,6 +53,7 @@ services:
     env_file: .env
     volumes:
       - ${PWD}/server:/app/server
+      - ${PWD}/logs:/app/logs
     networks:
       - minecraft-server-network
     ports:

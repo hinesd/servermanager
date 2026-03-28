@@ -7,7 +7,6 @@ endif
 -include .env
 
 DOCKER := docker compose
-ROOT_DIR := $(shell pwd)
 PROFILES := --profile servercontroller
 
 ifdef DISCORD_TOKEN
